@@ -328,7 +328,4 @@ class HealthyLifeBot : TelegramLongPollingBot() {
         response.replyMarkup = keyboard
         execute(response)
     }
-override fun clearWebhook() {
-    // Ничего не делаем, чтобы избежать удаления webhook и краша
-}
 }
