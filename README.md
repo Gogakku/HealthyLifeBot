@@ -1,22 +1,80 @@
 # HealthyLifeBot
 
-Telegram бот для помощи в здоровом образе жизни и фитнесе.
+Telegram бот для здорового образа жизни, разработанный на Kotlin с использованием библиотеки TelegramBots.
 
-## Развертывание на Railway.app
+## Функциональность
 
-1. Создайте аккаунт на [Railway.app](https://railway.app/)
-2. Создайте новый проект и выберите "Deploy from GitHub repo"
-3. Подключите ваш GitHub репозиторий
-4. Добавьте переменные окружения в настройках проекта:
-   - `TELEGRAM_BOT_TOKEN` - токен вашего Telegram бота
-   - `HUGGINGFACE_API_KEY` - ключ API Hugging Face
+- Интеграция с OpenAI для умных ответов
+- Советы по здоровому образу жизни
+- Отслеживание активности пользователя
 
-## Локальный запуск
+## Технологии
 
-1. Склонируйте репозиторий
-2. Создайте файл `.env` на основе `.env.example`
-3. Запустите:
+- Kotlin
+- Gradle
+- Docker
+- OpenAI API
+- Telegram Bots API
+
+## Установка и запуск
+
+### Локальный запуск
+
+1. Клонируйте репозиторий:
 ```bash
-./gradlew build
-java -jar build/libs/HealthyLifeBot.jar
+git clone https://github.com/yourusername/HealthyLifeBot.git
 ```
+
+2. Создайте файл .env на основе .env.example:
+```bash
+cp .env.example .env
+```
+
+3. Заполните необходимые переменные окружения в .env
+
+4. Запустите приложение:
+```bash
+./gradlew run
+```
+
+### Docker
+
+1. Соберите Docker образ:
+```bash
+docker build -t healthylifebot .
+```
+
+2. Запустите контейнер:
+```bash
+docker run -p 8080:8080 --env-file .env healthylifebot
+```
+
+## Деплой на Railway
+
+1. Создайте аккаунт на [Railway](https://railway.app/)
+2. Установите Railway CLI:
+```bash
+npm i -g @railway/cli
+```
+3. Залогиньтесь в Railway:
+```bash
+railway login
+```
+4. Инициализируйте проект:
+```bash
+railway init
+```
+5. Деплой проекта:
+```bash
+railway up
+```
+
+## Переменные окружения
+
+- `BOT_TOKEN` - Токен вашего Telegram бота
+- `OPENAI_API_KEY` - Ключ API OpenAI
+- `PORT` - Порт для запуска приложения (по умолчанию 8080)
+
+## Лицензия
+
+MIT
