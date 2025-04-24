@@ -1,20 +1,21 @@
 package org.example.org.example
 
 import org.example.bot.handlers.*
-import org.telegram.telegrambots.bots.TelegramLongPollingBot
+import org.telegram.telegrambots.bots.TelegramWebhookBot
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
-import org.example.OpenAIService  // Импортируем наш сервис для OpenAI
+import org.example.OpenAIService
 
-class HealthyLifeBot : TelegramLongPollingBot() {
+class HealthyLifeBot : TelegramWebhookBot() {
 
     private val userProfiles = mutableMapOf<Long, UserProfile>()
     private val userStates = mutableMapOf<Long, UserState>()
-
-    private val openAIService = OpenAIService("OPENAI_API_KEY")  // Передаём API-ключ в org.example.OpenAIService
+    private val botToken: String = System.getenv("BOT_TOKEN") ?: throw IllegalStateException("BOT_TOKEN не установлен")
+    private val openAIService = OpenAIService(System.getenv("OPENAI_API_KEY") ?: throw IllegalStateException("OPENAI_API_KEY не установлен"))
 
     fun getUserProfile(chatId: Long): UserProfile? = userProfiles[chatId]
 
@@ -23,21 +24,20 @@ class HealthyLifeBot : TelegramLongPollingBot() {
     }
 
     override fun getBotUsername(): String = "HealthyLifeBot"
-    override fun getBotToken(): String = "BOT_TOKEN"  // Заменить на актуальный токен
+    override fun getBotToken(): String = botToken
+    override fun getBotPath(): String = "webhook"
 
-    override fun onUpdateReceived(update: Update) {
-        val message = update.message ?: return
+    override fun onWebhookUpdateReceived(update: Update): BotApiMethod<*>? {
+        val message = update.message ?: return null
         val chatId = message.chatId
-        val text = message.text ?: return
+        val text = message.text ?: return null
 
         if (text == "/start") {
             val name = message.from?.firstName ?: "друг"
             userProfiles[chatId] = UserProfile(name = name)
             userStates[chatId] = UserState.AWAITING_AGE
 
-            val reply = SendMessage(chatId.toString(), "👋 Привет, $name! Давай начнём с твоего возраста. Сколько тебе лет?")
-            execute(reply)
-            return
+            return SendMessage(chatId.toString(), "👋 Привет, $name! Давай начнём с твоего возраста. Сколько тебе лет?")
         }
 
         val state = userStates[chatId]
@@ -50,9 +50,9 @@ class HealthyLifeBot : TelegramLongPollingBot() {
                     if (age != null && age in 10..100) {
                         profile.age = age
                         userStates[chatId] = UserState.AWAITING_HEIGHT
-                        execute(SendMessage(chatId.toString(), "Отлично! Теперь укажи свой рост в сантиметрах:"))
+                        return SendMessage(chatId.toString(), "Отлично! Теперь укажи свой рост в сантиметрах:")
                     } else {
-                        execute(SendMessage(chatId.toString(), "Пожалуйста, введи корректный возраст (от 10 до 100 лет)."))
+                        return SendMessage(chatId.toString(), "Пожалуйста, введи корректный возраст (от 10 до 100 лет).")
                     }
                 }
 
@@ -61,9 +61,9 @@ class HealthyLifeBot : TelegramLongPollingBot() {
                     if (height != null && height in 100..250) {
                         profile.height = height
                         userStates[chatId] = UserState.AWAITING_WEIGHT
-                        execute(SendMessage(chatId.toString(), "Спасибо! А теперь укажи свой вес в кг:"))
+                        return SendMessage(chatId.toString(), "Спасибо! А теперь укажи свой вес в кг:")
                     } else {
-                        execute(SendMessage(chatId.toString(), "Введи корректный рост (например, 175):"))
+                        return SendMessage(chatId.toString(), "Введи корректный рост (например, 175):")
                     }
                 }
 
@@ -72,14 +72,14 @@ class HealthyLifeBot : TelegramLongPollingBot() {
                     if (weight != null && weight in 30..300) {
                         profile.weight = weight
                         userStates[chatId] = UserState.AWAITING_GOAL
-                        execute(SendMessage(chatId.toString(), """
+                        return SendMessage(chatId.toString(), """
                             Почти готово! Теперь выбери свою цель:
                             1. Похудеть
                             2. Набрать мышечную массу
                             3. Поддерживать форму
-                        """.trimIndent()))
+                        """.trimIndent())
                     } else {
-                        execute(SendMessage(chatId.toString(), "Введи корректный вес (например, 70):"))
+                        return SendMessage(chatId.toString(), "Введи корректный вес (например, 70):")
                     }
                 }
 
@@ -108,14 +108,14 @@ class HealthyLifeBot : TelegramLongPollingBot() {
 
                         val response = SendMessage(chatId.toString(), summary)
                         response.replyMarkup = createMainMenu()
-                        execute(response)
+                        return response
                     } else {
-                        execute(SendMessage(chatId.toString(), "Выбери одну из целей (1, 2 или 3):"))
+                        return SendMessage(chatId.toString(), "Выбери одну из целей (1, 2 или 3):")
                     }
                 }
 
                 UserState.COMPLETED -> {
-                    handleUserInput(chatId, text)
+                    return handleUserInput(chatId, text)
                 }
 
                 UserState.AI_ASSISTANT -> {
@@ -123,18 +123,17 @@ class HealthyLifeBot : TelegramLongPollingBot() {
                         userStates[chatId] = UserState.COMPLETED
                         val response = SendMessage(chatId.toString(), "Вы вернулись в главное меню")
                         response.replyMarkup = createMainMenu()
-                        execute(response)
+                        return response
                     } else {
-                        val aiResponse = openAIService.generateResponse(text)  // Здесь вызываем OpenAI для ответа на сообщение
+                        val aiResponse = openAIService.generateResponse(text)  
                         val response = SendMessage(chatId.toString(), aiResponse)
-                        // Сохраняем кнопку выхода
                         val keyboard = ReplyKeyboardMarkup()
                         keyboard.resizeKeyboard = true
                         keyboard.keyboard = listOf(
                             KeyboardRow(listOf(KeyboardButton("⬅️ Выход")))
                         )
                         response.replyMarkup = keyboard
-                        execute(response)
+                        return response
                     }
                 }
 
@@ -144,9 +143,9 @@ class HealthyLifeBot : TelegramLongPollingBot() {
                         profile.age = age
                         userStates[chatId] = UserState.COMPLETED
                         val handler = SettingsHandler(this)
-                        handler.handle(chatId)
+                        return handler.handle(chatId)
                     } else {
-                        execute(SendMessage(chatId.toString(), "Пожалуйста, введите корректный возраст (от 10 до 100 лет)."))
+                        return SendMessage(chatId.toString(), "Пожалуйста, введите корректный возраст (от 10 до 100 лет).")
                     }
                 }
 
@@ -156,9 +155,9 @@ class HealthyLifeBot : TelegramLongPollingBot() {
                         profile.height = height
                         userStates[chatId] = UserState.COMPLETED
                         val handler = SettingsHandler(this)
-                        handler.handle(chatId)
+                        return handler.handle(chatId)
                     } else {
-                        execute(SendMessage(chatId.toString(), "Введите корректный рост (от 100 до 250 см)."))
+                        return SendMessage(chatId.toString(), "Введите корректный рост (от 100 до 250 см).")
                     }
                 }
 
@@ -168,9 +167,9 @@ class HealthyLifeBot : TelegramLongPollingBot() {
                         profile.weight = weight
                         userStates[chatId] = UserState.COMPLETED
                         val handler = SettingsHandler(this)
-                        handler.handle(chatId)
+                        return handler.handle(chatId)
                     } else {
-                        execute(SendMessage(chatId.toString(), "Введите корректный вес (от 30 до 300 кг)."))
+                        return SendMessage(chatId.toString(), "Введите корректный вес (от 30 до 300 кг).")
                     }
                 }
 
@@ -186,21 +185,20 @@ class HealthyLifeBot : TelegramLongPollingBot() {
                         profile.goal = goal
                         userStates[chatId] = UserState.COMPLETED
                         val handler = SettingsHandler(this)
-                        handler.handle(chatId)
+                        return handler.handle(chatId)
                     } else {
-                        execute(SendMessage(chatId.toString(), "Выберите одну из предложенных целей."))
+                        return SendMessage(chatId.toString(), "Выберите одну из предложенных целей.")
                     }
                 }
             }
 
-            return
+            return null
         }
 
-        // Если нет состояния — обработка кнопок
-        handleUserInput(chatId, text)
+        return handleUserInput(chatId, text)
     }
 
-    private fun handleUserInput(chatId: Long, text: String) {
+    private fun handleUserInput(chatId: Long, text: String): BotApiMethod<*>? {
         val profile = userProfiles[chatId]
 
         if (profile?.goal != null) {
@@ -208,64 +206,62 @@ class HealthyLifeBot : TelegramLongPollingBot() {
                 "🏋️ Тренировки" -> {
                     val response = SendMessage(chatId.toString(), "Выбери тип тренировки:")
                     response.replyMarkup = createTrainingMenu()
-                    execute(response)
+                    return response
                 }
                 "Кардио", "Силовые тренировки", "Растяжка" -> {
                     val handler = TrainingHandler(this)
-                    handler.handleTrainingSelection(chatId, text)
+                    return handler.handleTrainingSelection(chatId, text)
                 }
                 "🍕 Питание" -> {
                     val handler = NutritionHandler(this)
-                    handler.handle(chatId)
+                    return handler.handle(chatId)
                 }
                 "🛌 Сон" -> {
                     val handler = SleepHandler(this)
-                    handler.handle(chatId)
+                    return handler.handle(chatId)
                 }
                 "📅 Распорядок дня" -> {
                     val handler = ScheduleHandler(this)
-                    handler.handle(chatId)
+                    return handler.handle(chatId)
                 }
                 "🎯 Цели" -> {
                     val handler = GoalsHandler(this)
-                    handler.handle(chatId)
+                    return handler.handle(chatId)
                 }
                 "❤️ Мотивация" -> {
                     val handler = MotivationHandler(this)
-                    handler.handle(chatId)
+                    return handler.handle(chatId)
                 }
                 "⬅️ Назад в меню" -> {
                     val response = SendMessage(chatId.toString(), "Главное меню:")
                     response.replyMarkup = createMainMenu()
-                    execute(response)
+                    return response
                 }
-                "🤖 ИИ Ассистент" -> handleAIAssistant(chatId, profile)
+                "🤖 ИИ Ассистент" -> return handleAIAssistant(chatId, profile)
                 "📊 Мой прогресс" -> {
                     val handler = ProgressHandler(this)
-                    handler.handle(chatId)
+                    return handler.handle(chatId)
                 }
                 "⚙️ Настройки" -> {
                     val handler = SettingsHandler(this)
-                    handler.handle(chatId)
+                    return handler.handle(chatId)
                 }
                 "Изменить возраст", "Изменить рост", "Изменить вес", "Изменить цель" -> {
                     val handler = SettingsHandler(this)
-                    handler.handleSettingChange(chatId, text)
+                    return handler.handleSettingChange(chatId, text)
                 }
                 "⬅️ Назад в настройки" -> {
                     val handler = SettingsHandler(this)
-                    handler.handle(chatId)
+                    return handler.handle(chatId)
                 }
                 else -> {
-                    // Интеграция с ИИ для получения ответа на вопросы
-                    val aiResponse = openAIService.generateResponse(text)  // Здесь вызываем OpenAI для ответа на сообщение
+                    val aiResponse = openAIService.generateResponse(text)  
                     val response = SendMessage(chatId.toString(), aiResponse)
-                    execute(response)
+                    return response
                 }
             }
         } else {
-            // Если профиль не завершён, отправляем сообщение
-            execute(SendMessage(chatId.toString(), "Сначала завершите создание профиля!"))
+            return SendMessage(chatId.toString(), "Сначала завершите создание профиля!")
         }
     }
 
@@ -304,7 +300,7 @@ class HealthyLifeBot : TelegramLongPollingBot() {
         return keyboard
     }
 
-    private fun handleAIAssistant(chatId: Long, profile: UserProfile) {
+    private fun handleAIAssistant(chatId: Long, profile: UserProfile): BotApiMethod<*> {
         userStates[chatId] = UserState.AI_ASSISTANT
         val message = """
             🤖 Я ваш ИИ ассистент по здоровому образу жизни! 
@@ -319,13 +315,12 @@ class HealthyLifeBot : TelegramLongPollingBot() {
         """.trimIndent()
         val response = SendMessage(chatId.toString(), message)
         
-        // Добавляем кнопку выхода
         val keyboard = ReplyKeyboardMarkup()
         keyboard.resizeKeyboard = true
         keyboard.keyboard = listOf(
             KeyboardRow(listOf(KeyboardButton("⬅️ Выход")))
         )
         response.replyMarkup = keyboard
-        execute(response)
+        return response
     }
 }
