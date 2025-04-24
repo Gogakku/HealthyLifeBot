@@ -20,13 +20,24 @@ fun main() {
         val bot = HealthyLifeBot()
         
         // Настраиваем внешний URL для вебхука
-        val webhookUrl = System.getenv("RAILWAY_STATIC_URL") ?: throw IllegalStateException("RAILWAY_STATIC_URL не установлен")
+        val webhookUrl = System.getenv("RAILWAY_STATIC_URL") ?: run {
+            println("⚠️ RAILWAY_STATIC_URL не установлен. Используем локальный режим.")
+            println("❗ Для работы вебхука в локальном режиме:")
+            println("1. Установите и запустите ngrok: ngrok http 8080")
+            println("2. Скопируйте полученный HTTPS URL")
+            println("3. Установите его в .env файл как RAILWAY_STATIC_URL")
+            println("4. Перезапустите приложение")
+            throw IllegalStateException("Требуется настройка RAILWAY_STATIC_URL для работы вебхука")
+        }
+
         val setWebhook = SetWebhook.builder()
             .url("$webhookUrl/webhook")
             .build()
             
         botsApi.registerBot(bot, setWebhook)
-        println("✅ Бот запущен и готов к работе! Вебхук установлен на: $webhookUrl/webhook")
+        println("✅ Бот запущен и готов к работе!")
+        println("🌐 Вебхук установлен на: $webhookUrl/webhook")
+        println("🚀 Порт: $port")
         
     } catch (e: TelegramApiException) {
         println("❌ Ошибка при запуске бота: ${e.message}")
