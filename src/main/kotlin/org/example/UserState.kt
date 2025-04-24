@@ -1,0 +1,14 @@
+package org.example.org.example
+
+enum class UserState {
+    AWAITING_AGE,
+    AWAITING_HEIGHT,
+    AWAITING_WEIGHT,
+    AWAITING_GOAL,
+    COMPLETED,
+    AI_ASSISTANT,
+    SETTINGS_AGE,
+    SETTINGS_HEIGHT,
+    SETTINGS_WEIGHT,
+    SETTINGS_GOAL
+}
