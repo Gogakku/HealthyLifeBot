@@ -1,7 +1,7 @@
 FROM gradle:7-jdk17 AS build
 WORKDIR /app
 COPY . .
-RUN gradle build --no-daemon
+RUN ./gradlew build --no-daemon  # Используем gradlew, если он присутствует
 
 FROM openjdk:17-slim
 WORKDIR /app
