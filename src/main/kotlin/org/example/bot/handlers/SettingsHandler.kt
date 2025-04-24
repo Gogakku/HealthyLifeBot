@@ -2,17 +2,17 @@ package org.example.bot.handlers
 
 import org.example.org.example.HealthyLifeBot
 import org.example.org.example.UserState
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 
 class SettingsHandler(private val bot: HealthyLifeBot) {
-    fun handle(chatId: Long) {
+    fun handle(chatId: Long): BotApiMethod<*> {
         val profile = bot.getUserProfile(chatId)
         if (profile == null) {
-            bot.execute(SendMessage(chatId.toString(), "Сначала необходимо создать профиль!"))
-            return
+            return SendMessage(chatId.toString(), "Сначала необходимо создать профиль!")
         }
 
         val message = """
@@ -30,10 +30,10 @@ class SettingsHandler(private val bot: HealthyLifeBot) {
 
         val response = SendMessage(chatId.toString(), message)
         response.replyMarkup = createSettingsMenu()
-        bot.execute(response)
+        return response
     }
 
-    fun handleSettingChange(chatId: Long, setting: String) {
+    fun handleSettingChange(chatId: Long, setting: String): BotApiMethod<*> {
         val message = when (setting) {
             "Изменить возраст" -> {
                 bot.setUserState(chatId, UserState.SETTINGS_AGE)
@@ -56,17 +56,14 @@ class SettingsHandler(private val bot: HealthyLifeBot) {
                     3. Поддерживать форму
                 """.trimIndent()
             }
-            else -> {
-                bot.setUserState(chatId, UserState.COMPLETED)
-                "Неизвестная настройка"
-            }
+            else -> "Неизвестная настройка"
         }
 
         val response = SendMessage(chatId.toString(), message)
         if (setting == "Изменить цель") {
             response.replyMarkup = createGoalMenu()
         }
-        bot.execute(response)
+        return response
     }
 
     private fun createSettingsMenu(): ReplyKeyboardMarkup {
