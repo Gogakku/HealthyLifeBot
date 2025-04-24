@@ -1,7 +1,9 @@
 FROM gradle:7-jdk17 AS build
 WORKDIR /app
 COPY . .
-RUN ./gradlew build --no-daemon  # Используем gradlew, если он присутствует
+# Добавляем права на выполнение для gradlew
+RUN chmod +x gradlew
+RUN ./gradlew build --no-daemon  # Используем gradlew для сборки
 
 FROM openjdk:17-slim
 WORKDIR /app
