@@ -16,6 +16,11 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:2.0.9")  // Для логирования
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.3")
+    // Для работы с SQLite через Exposed
+    implementation("org.jetbrains.exposed:exposed-core:0.50.1")
+    implementation("org.jetbrains.exposed:exposed-dao:0.50.1")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.50.1")
+    implementation("org.xerial:sqlite-jdbc:3.45.3.0")
 }
 
 application {

@@ -48,16 +48,20 @@ class OpenAIService(private val apiKey: String) {
     private fun makeRequest(prompt: String): RequestResult {
         val url = "https://api.proxyapi.ru/openai/v1/chat/completions"
 
+        val systemPrompt = """
+            Ты профессиональный фитнес-ассистент. Не расписывай разминку, просто добавь короткое предупреждение в начале ответа: 'Перед тренировкой обязательно хорошо разомнитесь!'.
+            Всегда завершай мысль или предложение полностью, не обрывай их.
+            Не превышай 350 токенов (примерно 2800 символов) — обязательно проверяй, чтобы весь твой ответ гарантированно влезал в этот лимит (максимум 400 токенов).
+            Форматируй упражнения и планы максимально кратко: вместо '4 подхода по 15 раз' используй '4x15'. Используй списки (bullet points или нумерованные) для структуры.
+            Если не хватает места, сокращай детали, но всегда завершай мысль. Не используй лишних слов.
+        """.trimIndent()
+
         val requestBody = mapper.writeValueAsString(mapOf(
             "model" to "gpt-4",
             "messages" to listOf(
                 mapOf(
                     "role" to "system",
-                    "content" to """You are a professional fitness trainer. Create detailed responses with:
-                        |1. Short introduction
-                        |2. Specific recommendations or plan
-                        |3. Motivational note
-                        |Keep responses practical and under 150 words.""".trimMargin()
+                    "content" to systemPrompt
                 ),
                 mapOf(
                     "role" to "user",
@@ -65,7 +69,7 @@ class OpenAIService(private val apiKey: String) {
                 )
             ),
             "temperature" to 0.7,
-            "max_tokens" to 200
+            "max_tokens" to 400
         ))
 
         val request = Request.Builder()
@@ -87,11 +91,13 @@ class OpenAIService(private val apiKey: String) {
             val responseBody = response.body?.string() ?: throw IOException("Empty response body")
             val jsonResponse = mapper.readTree(responseBody)
             
+            // Ограничение на 2800 символов (примерно 350 токенов)
+            val content = jsonResponse.path("choices").firstOrNull()
+                ?.path("message")
+                ?.path("content")
+                ?.asText() ?: throw IOException("No content in response")
             return RequestResult(
-                jsonResponse.path("choices").firstOrNull()
-                    ?.path("message")
-                    ?.path("content")
-                    ?.asText() ?: throw IOException("No content in response"),
+                content.take(2800),
                 false
             )
         }
